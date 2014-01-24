@@ -1,0 +1,23 @@
+{
+  "name": "co-nested-hbs",
+  "version": "0.0.1",
+  "repository": "speedmanly/co-nested-hbs",
+  "description": "Generator-based Handlebars templates for nested layouts.",
+  "keywords": [
+    "handlebars",
+    "hbs",
+    "koa",
+    "co",
+    "generators"
+  ],
+  "dependencies": {
+    "handlebars": "~1.3",
+    "readdirp": "~0.3"
+  },
+  "devDependencies": {
+    "co": "~3.0",
+    "mocha": "*",
+    "should": "*"
+  },
+  "license": "MIT"
+}
