@@ -1,39 +1,49 @@
 var fs = require('fs');
 var path = require('path');
-var readdirp = require('readdirp');
+var extend = require('xtend');
+var glob = require('glob');
 
-// thunk
-var read = function (filename) {
+// thunk!
+function read(filePath) {
   return function(done) {
-    fs.readFile(filename, {encoding: 'utf8'}, done);
+    fs.readFile(filePath, {encoding: 'utf8'}, done);
   };
-};
+}
 
-function registerPartials(partialsPath, handlebars) {
-  var stream = readdirp({root: partialsPath, fileFilter: '_*.hbs'});
+// thunk!
+function findPartialTemplateFiles(partialsPath) {
+  return function(done) {
+    glob(path.join(partialsPath, '**/_*.hbs'), done);
+  };
+}
 
-  stream
-    .on('warn', function (err) {
-      console.error('non-fatal error', err);
-    })
-    .on('error', function (err) { console.error('fatal error', err); })
-    .on('data', function (entry) {
-      // TODO: how to get rid of this readFileSync?
-      var rawTemplate = fs.readFileSync(entry.fullPath, {encoding: 'utf8'});
-      handlebars.registerPartial(path.basename(entry.name, '.hbs').substring(1), rawTemplate);
-    });
+function* registerPartials(partialsPath, handlebars) {
+  var i, len, files, filePath, partialName, rawTemplate;
+
+  files = yield findPartialTemplateFiles(partialsPath);
+
+  for(i = 0, len = files.length; i < len; i++) {
+    filePath = files[i];
+    rawTemplate = yield read(filePath);
+    partialName = path.basename(filePath, '.hbs').substring(1);
+
+    handlebars.registerPartial(partialName, rawTemplate);
+  }
 }
 
 module.exports = function(viewPath, opts) {
   opts = opts || {};
   opts.partialsPath = opts.partialsPath || viewPath;
   opts.cache = opts.cache || true;
+  opts.layouts = opts.layouts || [];
 
-  var hbs = {};
+  if(!(opts.layouts instanceof Array)) {
+    opts.layouts = [opts.layouts];
+  }
+
+  var hbs = {layouts: opts.layouts, registeredPartials: false};
 
   hbs.handlebars = require('handlebars').create();
-
-  registerPartials(opts.partialsPath, hbs.handlebars);
 
   hbs.registerHelper = function() {
     hbs.handlebars.registerHelper.apply(hbs.handlebars, arguments);
@@ -42,6 +52,11 @@ module.exports = function(viewPath, opts) {
   hbs.cache = {};
 
   hbs.render = function *(tmpl, locals) {
+    if (!hbs.registeredPartials) {
+      yield registerPartials(opts.partialsPath, hbs.handlebars);
+      hbs.registeredPartials = true;
+    }
+
     if (!tmpl.endsWith('.hbs')) {
       tmpl = tmpl + '.hbs';
     }
@@ -55,9 +70,13 @@ module.exports = function(viewPath, opts) {
     return hbs.cache[tmpl](locals);
   };
 
-  hbs.renderAll = function *renderAll (arr) {
+  hbs.renderAll = function *renderAll (arr, globalLocals) {
     var buffer=null,
       i, len, tmpl, locals;
+
+    globalLocals = globalLocals || {};
+
+    arr = arr.concat(hbs.layouts);
 
     for(i = 0, len = arr.length; i < len; i++) {
       tmpl = arr[i][0];
@@ -65,7 +84,7 @@ module.exports = function(viewPath, opts) {
 
       locals.body = buffer;
 
-      buffer = yield hbs.render(tmpl, locals);
+      buffer = yield hbs.render(tmpl, extend(globalLocals, locals));
     }
 
     return buffer;

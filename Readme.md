@@ -4,7 +4,7 @@ Generator-based Handlebars templates for nested layouts.
 
 [koa-hbs](https://github.com/jwilm/koa-hbs) is really great, but doesn't support nested layouts. Adding nested layouts to koa-hbs would unfortunately be a complete rewrite.
 
-co-nested-hbs supports layouts, helpers, and partials.
+co-nested-hbs supports (nested) layouts, helpers, and partials.
 
 ## Installation
 
@@ -85,7 +85,11 @@ Partials are automatically registered if their filename matches `_*.hbs`, direct
 
 ```js
 function *() {
-  var view = require('co-nested-hbs')('view_path/goes/here');
+  var view = require('co-nested-hbs')('view_path/goes/here', {
+    layout: 'layout_file', // specify implied layout (or layouts) to be added to each renderAll() call.
+    partialsPath: 'path_to_partials',
+    cache: true
+  });
 
   // single template rendering
   var html = yield view.render('template', {local: 'variable'});
@@ -97,10 +101,17 @@ function *() {
 
   // render the following templates in a chain, building the 'nest'
   var html = yield view.renderAll([
-    ['first_render', {name: 'Bob'}],
+    ['first_render', {local: 'variable'}],
     ['second_render'], // {{{body}}} here will refer to the first_render html output
     ['third_render', {title: 'Hello World!'}] // {{{body}}} here will refer to the second_render html output. voila, nesting.
   ]);
+
+  // 'global' locals can be applied to all templates when they are rendered
+  var html = yield view.renderAll([
+    ['first_render', {local: 'variable'}],
+    ['second_render'],
+    ['third_render', {title: 'Hello World!'}]
+  ], {global_local: 'applied to all templates'});
 }
 ```
 
