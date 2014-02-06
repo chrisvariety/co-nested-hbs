@@ -66,7 +66,7 @@ module.exports = function(viewPath, opts) {
     opts.layouts = [opts.layouts];
   }
 
-  var hbs = {layouts: opts.layouts};
+  var hbs = {layouts: opts.layouts, handlebars: handlebars};
 
   hbs.registerHelper = function() {
     handlebars.registerHelper.apply(handlebars, arguments);
