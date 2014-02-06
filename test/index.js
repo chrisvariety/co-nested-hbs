@@ -93,6 +93,15 @@ describe('view.render', function() {
     })(done);
   });
 
+  it('ignores a null layout', function(done) {
+    co(function *() {
+      var view = require('..')('test', {layout: 'a'}),
+        html = yield view.render('c', {}, {layout: null});
+
+      assert.equal(html, '<a>c\n</a>\n');
+    })(done);
+  });
+
   it('takes a last argument to prefix the given templates', function(done) {
     co(function *() {
       var view = require('..')('test'),
