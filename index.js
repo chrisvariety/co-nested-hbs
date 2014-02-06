@@ -34,7 +34,7 @@ var hbsCache = {};
 
 var registeredPartials = false;
 
-function *renderTemplate(viewPath, partialsPath, tmpl, locals) {
+function* renderTemplate(viewPath, partialsPath, tmpl, locals) {
   if (!registeredPartials) {
     yield registerPartials(partialsPath);
     registeredPartials = true;
