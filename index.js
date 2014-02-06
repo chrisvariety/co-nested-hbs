@@ -1,23 +1,22 @@
 var fs = require('fs');
 var path = require('path');
-var extend = require('xtend');
 var glob = require('glob');
 
-// thunk!
+var handlebars = require('handlebars').create();
+
 function read(filePath) {
   return function(done) {
     fs.readFile(filePath, {encoding: 'utf8'}, done);
   };
 }
 
-// thunk!
 function findPartialTemplateFiles(partialsPath) {
   return function(done) {
     glob(path.join(partialsPath, '**/_*.hbs'), done);
   };
 }
 
-function* registerPartials(partialsPath, handlebars) {
+function* registerPartials(partialsPath) {
   var i, len, files, filePath, partialName, rawTemplate;
 
   files = yield findPartialTemplateFiles(partialsPath);
@@ -31,60 +30,68 @@ function* registerPartials(partialsPath, handlebars) {
   }
 }
 
+var hbsCache = {};
+
+var registeredPartials = false;
+
+function *renderTemplate(viewPath, partialsPath, tmpl, locals) {
+  if (!registeredPartials) {
+    yield registerPartials(partialsPath);
+    registeredPartials = true;
+  }
+
+  if (!tmpl.endsWith('.hbs')) {
+    tmpl = tmpl + '.hbs';
+  }
+
+  if(!hbsCache[tmpl]) {
+    var rawTemplate = yield read(path.join(viewPath, tmpl));
+    hbsCache[tmpl] = handlebars.compile(rawTemplate);
+  }
+
+  return hbsCache[tmpl](locals);
+}
+
 module.exports = function(viewPath, opts) {
   opts = opts || {};
   opts.partialsPath = opts.partialsPath || viewPath;
   opts.cache = opts.cache || true;
-  opts.layouts = opts.layouts || [];
+  if (opts.layout) {
+    opts.layouts = [opts.layout];
+  } else {
+    opts.layouts = opts.layouts || [];
+  }
 
   if(!(opts.layouts instanceof Array)) {
     opts.layouts = [opts.layouts];
   }
 
-  var hbs = {layouts: opts.layouts, registeredPartials: false};
-
-  hbs.handlebars = require('handlebars').create();
+  var hbs = {layouts: opts.layouts};
 
   hbs.registerHelper = function() {
-    hbs.handlebars.registerHelper.apply(hbs.handlebars, arguments);
+    handlebars.registerHelper.apply(handlebars, arguments);
   };
 
-  hbs.cache = {};
+  hbs.render = function* () {
+    var buffer=null, templates, locals, i, len, tmpl;
 
-  hbs.render = function *(tmpl, locals) {
-    if (!hbs.registeredPartials) {
-      yield registerPartials(opts.partialsPath, hbs.handlebars);
-      hbs.registeredPartials = true;
+    locals = arguments[arguments.length - 1];
+
+    if (typeof locals === 'object') {
+      templates = Array.prototype.slice.call(arguments, 0, -1);
+    } else {
+      locals = {};
+      templates = Array.prototype.slice.call(arguments);
     }
 
-    if (!tmpl.endsWith('.hbs')) {
-      tmpl = tmpl + '.hbs';
-    }
-    locals = locals || {};
+    templates = templates.concat(hbs.layouts);
 
-    if(!hbs.cache[tmpl]) {
-      var rawTemplate = yield read(path.join(viewPath, tmpl));
-      hbs.cache[tmpl] = hbs.handlebars.compile(rawTemplate);
-    }
-
-    return hbs.cache[tmpl](locals);
-  };
-
-  hbs.renderAll = function *renderAll (arr, globalLocals) {
-    var buffer=null,
-      i, len, tmpl, locals;
-
-    globalLocals = globalLocals || {};
-
-    arr = arr.concat(hbs.layouts);
-
-    for(i = 0, len = arr.length; i < len; i++) {
-      tmpl = arr[i][0];
-      locals = arr[i][1] || {};
+    for(i = 0, len = templates.length; i < len; i++) {
+      tmpl = templates[i];
 
       locals.body = buffer;
 
-      buffer = yield hbs.render(tmpl, extend(globalLocals, locals));
+      buffer = yield renderTemplate(viewPath, opts.partialsPath, tmpl, locals);
     }
 
     return buffer;

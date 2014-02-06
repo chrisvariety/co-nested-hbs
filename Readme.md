@@ -50,11 +50,7 @@ var co = require('co');
 var view = require('co-nested-hbs');
 
 co(function *() {
-  var html = yield view.renderAll([
-    ['home', {name: 'Bob'}],
-    ['simple_theme'],
-    ['overall_layout', {title: 'Hello World!'}]
-  ]);
+  var html = yield view.render('home', 'simple_theme', 'overall_layout', {title: 'Hello World!'});
 })();
 ```
 
@@ -86,7 +82,7 @@ Partials are automatically registered if their filename matches `_*.hbs`, direct
 ```js
 function *() {
   var view = require('co-nested-hbs')('view_path/goes/here', {
-    layout: 'layout_file', // specify implied layout (or layouts) to be added to each renderAll() call.
+    layout: 'layout_file', // specify implied layout (or layouts) to be added to each render() call.
     partialsPath: 'path_to_partials',
     cache: true
   });
@@ -100,18 +96,10 @@ function *() {
   });
 
   // render the following templates in a chain, building the 'nest'
-  var html = yield view.renderAll([
-    ['first_render', {local: 'variable'}],
-    ['second_render'], // {{{body}}} here will refer to the first_render html output
-    ['third_render', {title: 'Hello World!'}] // {{{body}}} here will refer to the second_render html output. voila, nesting.
-  ]);
+  var html = yield view.render('first_render', 'second_render', 'third_render');
 
-  // 'global' locals can be applied to all templates when they are rendered
-  var html = yield view.renderAll([
-    ['first_render', {local: 'variable'}],
-    ['second_render'],
-    ['third_render', {title: 'Hello World!'}]
-  ], {global_local: 'applied to all templates'});
+  // locals can be applied to all templates when they are rendered
+  var html = yield view.render('first_render', 'second_render', 'third_render', {title: 'Hello World!'}, {global_local: 'applied to all templates'});
 }
 ```
 
