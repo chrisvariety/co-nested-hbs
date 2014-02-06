@@ -84,12 +84,21 @@ describe('view.render', function() {
     })(done);
   });
 
-  it('takes a last argument to replace the default viewPath', function(done) {
+  it('takes a last argument to choose a new layout', function(done) {
     co(function *() {
-      var view = require('..')('madeuppath'),
-        html = yield view.render('c', {}, {viewPath: 'test'});
+      var view = require('..')('test', {layout: 'a'}),
+        html = yield view.render('c', {}, {layout: 'b'});
 
-      assert.equal(html, 'c\n');
+      assert.equal(html, '<b>c\n</b>\n');
+    })(done);
+  });
+
+  it('takes a last argument to prefix the given templates', function(done) {
+    co(function *() {
+      var view = require('..')('test'),
+        html = yield view.render('test', {}, {viewPathPrefix: 'test'});
+
+      assert.equal(html, 'test\n');
     })(done);
   });
 });

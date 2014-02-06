@@ -96,18 +96,26 @@ module.exports = function(viewPath, opts) {
       templates = Array.prototype.slice.call(arguments);
     }
 
-    if (renderOpts.layout !== false) {
-      templates = templates.concat(hbs.layouts);
+    if (renderOpts.viewPathPrefix) {
+      templates = templates.map(function(tmpl) {
+        return path.join(renderOpts.viewPathPrefix, tmpl);
+      });
     }
 
-    renderViewPath = renderOpts.viewPath || viewPath;
+    if (renderOpts.layout !== false) {
+      if (renderOpts.layout) {
+        templates = templates.concat([renderOpts.layout]);
+      } else {
+        templates = templates.concat(hbs.layouts);
+      }
+    }
 
     for(i = 0, len = templates.length; i < len; i++) {
       tmpl = templates[i];
 
       locals.body = buffer;
 
-      buffer = yield renderTemplate(renderViewPath, opts.partialsPath, tmpl, locals);
+      buffer = yield renderTemplate(viewPath, opts.partialsPath, tmpl, locals);
     }
 
     return buffer;
