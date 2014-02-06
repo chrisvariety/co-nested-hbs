@@ -17,7 +17,7 @@ describe('view.render', function() {
 
   it('a layout can be specified', function(done) {
     co(function *() {
-      var view = require('..')('test', {layout: 'a'}),
+      var view = require('..')('test', {layout: 'test/a'}),
         html = yield view.render('c');
 
       assert.equal(html, '<a>c\n</a>\n');
@@ -26,7 +26,7 @@ describe('view.render', function() {
 
   it('multiple layouts can be specified', function(done) {
     co(function *() {
-      var view = require('..')('test', {layouts: ['b', 'a']}),
+      var view = require('..')('test', {layouts: ['test/b', 'test/a']}),
         html = yield view.render('c');
 
       assert.equal(html, '<a><b>c\n</b>\n</a>\n');
@@ -86,8 +86,8 @@ describe('view.render', function() {
 
   it('takes a last argument to choose a new layout', function(done) {
     co(function *() {
-      var view = require('..')('test', {layout: 'a'}),
-        html = yield view.render('c', {}, {layout: 'b'});
+      var view = require('..')('test', {layout: 'test/a'}),
+        html = yield view.render('c', {}, {layout: 'test/b'});
 
       assert.equal(html, '<b>c\n</b>\n');
     })(done);
@@ -95,19 +95,11 @@ describe('view.render', function() {
 
   it('ignores a null layout', function(done) {
     co(function *() {
-      var view = require('..')('test', {layout: 'a'}),
+      var view = require('..')('test', {layout: 'test/a'}),
         html = yield view.render('c', {}, {layout: null});
 
       assert.equal(html, '<a>c\n</a>\n');
     })(done);
   });
 
-  it('takes a last argument to prefix the given templates', function(done) {
-    co(function *() {
-      var view = require('..')('test'),
-        html = yield view.render('test', {}, {viewPathPrefix: 'test'});
-
-      assert.equal(html, 'test\n');
-    })(done);
-  });
 });

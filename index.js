@@ -34,18 +34,13 @@ var hbsCache = {};
 
 var registeredPartials = false;
 
-function* renderTemplate(viewPath, partialsPath, tmpl, locals) {
-  if (!registeredPartials) {
-    yield registerPartials(partialsPath);
-    registeredPartials = true;
-  }
-
+function* renderTemplate(tmpl, locals) {
   if (!tmpl.endsWith('.hbs')) {
     tmpl = tmpl + '.hbs';
   }
 
   if(!hbsCache[tmpl]) {
-    var rawTemplate = yield read(path.join(viewPath, tmpl));
+    var rawTemplate = yield read(tmpl);
     hbsCache[tmpl] = handlebars.compile(rawTemplate);
   }
 
@@ -76,6 +71,11 @@ module.exports = function(viewPath, opts) {
     var buffer=null, lastArg, secondToLastArg, renderViewPath,
       renderOpts, locals, templates, i, len, tmpl;
 
+    if (!registeredPartials) {
+      yield registerPartials(opts.partialsPath);
+      registeredPartials = true;
+    }
+
     lastArg = arguments[arguments.length - 1];
     secondToLastArg = arguments[arguments.length - 2];
 
@@ -96,11 +96,9 @@ module.exports = function(viewPath, opts) {
       templates = Array.prototype.slice.call(arguments);
     }
 
-    if (renderOpts.viewPathPrefix) {
-      templates = templates.map(function(tmpl) {
-        return path.join(renderOpts.viewPathPrefix, tmpl);
-      });
-    }
+    templates = templates.map(function(tmpl) {
+      return path.join(viewPath, tmpl);
+    });
 
     if (renderOpts.layout !== false) {
       if (renderOpts.layout) {
@@ -115,7 +113,7 @@ module.exports = function(viewPath, opts) {
 
       locals.body = buffer;
 
-      buffer = yield renderTemplate(viewPath, opts.partialsPath, tmpl, locals);
+      buffer = yield renderTemplate(tmpl, locals);
     }
 
     return buffer;
