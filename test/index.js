@@ -42,6 +42,15 @@ describe('view.render', function() {
     })(done);
   });
 
+  it('accepts locals and render options', function(done) {
+    co(function *() {
+      var view = require('..')('test'),
+        html = yield view.render('locals', {world: 'world'}, {layout: false});
+
+      assert.equal(html, 'hello world\n');
+    })(done);
+  });
+
   it('finds and renders partials', function(done) {
     co(function *() {
       var view = require('..')('test');
@@ -63,6 +72,24 @@ describe('view.render', function() {
 
       html = yield view.render('helper');
       assert.equal(html, 'hello <a href="http://www.world.com/">world</a>\n');
+    })(done);
+  });
+
+  it('takes a last argument to disable the global layouts', function(done) {
+    co(function *() {
+      var view = require('..')('test', {layout: 'a'}),
+        html = yield view.render('c', {}, {layout: false});
+
+      assert.equal(html, 'c\n');
+    })(done);
+  });
+
+  it('takes a last argument to replace the default viewPath', function(done) {
+    co(function *() {
+      var view = require('..')('madeuppath'),
+        html = yield view.render('c', {}, {viewPath: 'test'});
+
+      assert.equal(html, 'c\n');
     })(done);
   });
 });

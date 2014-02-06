@@ -73,25 +73,41 @@ module.exports = function(viewPath, opts) {
   };
 
   hbs.render = function* () {
-    var buffer=null, templates, locals, i, len, tmpl;
+    var buffer=null, lastArg, secondToLastArg, renderViewPath,
+      renderOpts, locals, templates, i, len, tmpl;
 
-    locals = arguments[arguments.length - 1];
+    lastArg = arguments[arguments.length - 1];
+    secondToLastArg = arguments[arguments.length - 2];
 
-    if (typeof locals === 'object') {
+    if (typeof secondToLastArg === 'object') {
+      // both renderOpts and locals given
+      renderOpts = lastArg;
+      locals = secondToLastArg;
+      templates = Array.prototype.slice.call(arguments, 0, -2);
+    } else if (typeof lastArg === 'object') {
+      // just locals given
+      renderOpts = {};
+      locals = lastArg;
       templates = Array.prototype.slice.call(arguments, 0, -1);
     } else {
+      // neither renderOpts nor locals given
+      renderOpts = {};
       locals = {};
       templates = Array.prototype.slice.call(arguments);
     }
 
-    templates = templates.concat(hbs.layouts);
+    if (renderOpts.layout !== false) {
+      templates = templates.concat(hbs.layouts);
+    }
+
+    renderViewPath = renderOpts.viewPath || viewPath;
 
     for(i = 0, len = templates.length; i < len; i++) {
       tmpl = templates[i];
 
       locals.body = buffer;
 
-      buffer = yield renderTemplate(viewPath, opts.partialsPath, tmpl, locals);
+      buffer = yield renderTemplate(renderViewPath, opts.partialsPath, tmpl, locals);
     }
 
     return buffer;
