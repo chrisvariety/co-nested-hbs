@@ -1,6 +1,6 @@
 {
   "name": "co-nested-hbs",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "repository": "speedmanly/co-nested-hbs",
   "description": "Generator-based Handlebars templates for nested layouts.",
   "keywords": [

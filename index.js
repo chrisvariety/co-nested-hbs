@@ -1,8 +1,7 @@
 var fs = require('fs');
 var path = require('path');
 var glob = require('glob');
-
-var handlebars = require('handlebars').create();
+var Handlebars = require('handlebars');
 
 function read(filePath) {
   return function(done) {
@@ -16,7 +15,7 @@ function findPartialTemplateFiles(partialsPath) {
   };
 }
 
-function* registerPartials(partialsPath) {
+function *registerPartials(handlebars, partialsPath) {
   var i, len, files, filePath, partialName, rawTemplate;
 
   files = yield findPartialTemplateFiles(partialsPath);
@@ -25,16 +24,15 @@ function* registerPartials(partialsPath) {
     filePath = files[i];
     rawTemplate = yield read(filePath);
     partialName = path.basename(filePath, '.hbs').substring(1);
-
     handlebars.registerPartial(partialName, rawTemplate);
   }
 }
 
 var hbsCache = {};
 
-var registeredPartials = false;
+var registeredPartialPaths = {};
 
-function* renderTemplate(tmpl, locals) {
+function *renderTemplate(handlebars, tmpl, locals) {
   if (!tmpl.endsWith('.hbs')) {
     tmpl = tmpl + '.hbs';
   }
@@ -48,6 +46,8 @@ function* renderTemplate(tmpl, locals) {
 }
 
 module.exports = function(viewPath, opts) {
+  var handlebars = Handlebars.create();
+
   opts = opts || {};
   opts.partialsPath = opts.partialsPath || viewPath;
   opts.cache = opts.cache || true;
@@ -68,12 +68,12 @@ module.exports = function(viewPath, opts) {
   };
 
   hbs.render = function* () {
-    var buffer=null, lastArg, secondToLastArg, renderViewPath,
+    var buffer=null, lastArg, secondToLastArg,
       renderOpts, locals, templates, i, len, tmpl;
 
-    if (!registeredPartials) {
-      yield registerPartials(opts.partialsPath);
-      registeredPartials = true;
+    if (opts.partialsPath && !registeredPartialPaths[opts.partialsPath]) {
+      yield registerPartials(handlebars, opts.partialsPath);
+      registeredPartialPaths[opts.partialsPath] = true;
     }
 
     lastArg = arguments[arguments.length - 1];
@@ -113,7 +113,7 @@ module.exports = function(viewPath, opts) {
 
       locals.body = buffer;
 
-      buffer = yield renderTemplate(tmpl, locals);
+      buffer = yield renderTemplate(handlebars, tmpl, locals);
     }
 
     return buffer;

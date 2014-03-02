@@ -3,7 +3,19 @@ var assert = require('assert');
 var co = require('co');
 
 // preload
-require('..')('test');
+require('..')('test')
+
+it('allows for different partials with the same name across different partialPaths', function(done) {
+  co(function *() {
+    var view1 = require('..')('test');
+    var view2 = require('..')('test_instances');
+
+    var html1 = yield view1.render('partial', {world: 'world'});
+    assert.equal(html1, 'hello partial world\n\n');
+    var html2 = yield view2.render('partial');
+    assert.equal(html2, 'hello partial with different view path\n\n');
+  })(done);
+});
 
 describe('view.render', function() {
   it('nests output', function(done) {
