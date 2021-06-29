@@ -43,15 +43,11 @@ views/home.hbs
 
     <p>Welcome {{name}}!<p>
 
-
 ```js
 var r = require('rethinkdb');
-var co = require('co');
 var view = require('co-nested-hbs');
 
-co(function *() {
-  var html = yield view.render('home', 'simple_theme', 'overall_layout', {title: 'Hello World!'});
-})();
+var html = await view.render('home', 'simple_theme', 'overall_layout', { title: 'Hello World!' });
 ```
 
 html output would be:
@@ -105,4 +101,4 @@ function *() {
 
 # License
 
-  MIT
+MIT

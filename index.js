@@ -1,28 +1,24 @@
-var fs = require('fs');
+var fs = require('fs').promises;
 var path = require('path');
-var glob = require('glob');
+var globby = require('globby');
 var Handlebars = require('handlebars');
 
-function read(filePath) {
-  return function(done) {
-    fs.readFile(filePath, {encoding: 'utf8'}, done);
-  };
+async function read(filePath) {
+  return await fs.readFile(filePath, { encoding: 'utf8' });
 }
 
-function findPartialTemplateFiles(partialsPath) {
-  return function(done) {
-    glob(path.join(partialsPath, '**/_*.hbs'), done);
-  };
+async function findPartialTemplateFiles(partialsPath) {
+  return await globby(path.join(partialsPath, '**/_*.hbs'));
 }
 
-function *registerPartials(handlebars, partialsPath) {
+async function registerPartials(handlebars, partialsPath) {
   var i, len, files, filePath, partialName, rawTemplate;
 
-  files = yield findPartialTemplateFiles(partialsPath);
+  files = await findPartialTemplateFiles(partialsPath);
 
-  for(i = 0, len = files.length; i < len; i++) {
+  for (i = 0, len = files.length; i < len; i++) {
     filePath = files[i];
-    rawTemplate = yield read(filePath);
+    rawTemplate = await read(filePath);
     partialName = path.basename(filePath, '.hbs').substring(1);
     handlebars.registerPartial(partialName, rawTemplate);
   }
@@ -32,20 +28,20 @@ var hbsCache = {};
 
 var registeredPartialPaths = {};
 
-function *renderTemplate(handlebars, tmpl, locals) {
+async function renderTemplate(handlebars, tmpl, locals) {
   if (!tmpl.endsWith('.hbs')) {
     tmpl = tmpl + '.hbs';
   }
 
-  if(!hbsCache[tmpl]) {
-    var rawTemplate = yield read(tmpl);
+  if (!hbsCache[tmpl]) {
+    var rawTemplate = await read(tmpl);
     hbsCache[tmpl] = handlebars.compile(rawTemplate);
   }
 
   return hbsCache[tmpl](locals);
 }
 
-module.exports = function(viewPath, opts) {
+module.exports = function (viewPath, opts) {
   var handlebars = Handlebars.create();
 
   opts = opts || {};
@@ -57,22 +53,29 @@ module.exports = function(viewPath, opts) {
     opts.layouts = opts.layouts || [];
   }
 
-  if(!(opts.layouts instanceof Array)) {
+  if (!(opts.layouts instanceof Array)) {
     opts.layouts = [opts.layouts];
   }
 
-  var hbs = {layouts: opts.layouts, handlebars: handlebars};
+  var hbs = { layouts: opts.layouts, handlebars: handlebars };
 
-  hbs.registerHelper = function() {
+  hbs.registerHelper = function () {
     handlebars.registerHelper.apply(handlebars, arguments);
   };
 
-  hbs.render = function* () {
-    var buffer=null, lastArg, secondToLastArg,
-      renderOpts, locals, templates, i, len, tmpl;
+  hbs.render = async function () {
+    var buffer = null,
+      lastArg,
+      secondToLastArg,
+      renderOpts,
+      locals,
+      templates,
+      i,
+      len,
+      tmpl;
 
     if (opts.partialsPath && !registeredPartialPaths[opts.partialsPath]) {
-      yield registerPartials(handlebars, opts.partialsPath);
+      await registerPartials(handlebars, opts.partialsPath);
       registeredPartialPaths[opts.partialsPath] = true;
     }
 
@@ -96,7 +99,7 @@ module.exports = function(viewPath, opts) {
       templates = Array.prototype.slice.call(arguments);
     }
 
-    templates = templates.map(function(tmpl) {
+    templates = templates.map(function (tmpl) {
       return path.join(viewPath, tmpl);
     });
 
@@ -108,12 +111,12 @@ module.exports = function(viewPath, opts) {
       }
     }
 
-    for(i = 0, len = templates.length; i < len; i++) {
+    for (i = 0, len = templates.length; i < len; i++) {
       tmpl = templates[i];
 
       locals.body = buffer;
 
-      buffer = yield renderTemplate(handlebars, tmpl, locals);
+      buffer = await renderTemplate(handlebars, tmpl, locals);
     }
 
     return buffer;
